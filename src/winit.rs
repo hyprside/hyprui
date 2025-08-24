@@ -16,13 +16,13 @@ use skia_safe::{Color, Color4f, ColorType, Paint, Rect};
 use std::num::NonZeroU32;
 use std::rc::Rc;
 use winit::application::ApplicationHandler;
-use winit::event::{KeyEvent, WindowEvent};
+use winit::event::{ButtonSource, ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey};
 use winit::raw_window_handle::HasWindowHandle;
 use winit::window::{Window, WindowAttributes, WindowId};
 
-use crate::{REQUEST_REDRAW};
+use crate::REQUEST_REDRAW;
 impl ApplicationHandler for WinitApp {
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
         let (window, gl_config) = match DisplayBuilder::new()
@@ -86,7 +86,7 @@ impl ApplicationHandler for WinitApp {
                     gl_surface,
                     window,
                     mut skia_context,
-                    mut skia_surface,
+                    skia_surface: _,
                 }) = self.window.take()
                 else {
                     return;
@@ -106,6 +106,8 @@ impl ApplicationHandler for WinitApp {
                     NonZeroU32::new(size.height).unwrap(),
                 );
                 self.gl_context = gl_context.into();
+                let size = size.to_logical(window.scale_factor());
+                (self.callbacks.on_window_resize)(size.width, size.height);
                 self.window = SurfaceAndWindow {
                     gl_surface,
                     skia_surface,
@@ -133,20 +135,50 @@ impl ApplicationHandler for WinitApp {
                 else {
                     return;
                 };
-                skia_surface
-                    .canvas()
-                    .clear(Color4f::new(1.0, 1.0, 1.0, 1.0))
-                    .draw_rect(
-                        Rect::from_wh(100., 100.),
-                        Paint::default().set_color(Color::BLACK),
-                    );
-
+                skia_surface.canvas().clear(Color::TRANSPARENT);
+                (self.callbacks.on_render_callback)(skia_surface.canvas());
                 skia_context.flush_and_submit();
                 gl_surface
                     .swap_buffers(self.gl_context.as_ref().unwrap())
                     .unwrap();
 
                 log::debug!("Render");
+            }
+            WindowEvent::PointerMoved {
+                device_id,
+                position,
+                primary,
+                source,
+            } => {
+                let Some(SurfaceAndWindow { window, .. }) = self.window.as_mut() else {
+                    return;
+                };
+                let mouse_position = position.to_logical(window.scale_factor());
+                (self.callbacks.on_mouse_move)(mouse_position.x, mouse_position.y);
+                window.request_redraw();
+            }
+            WindowEvent::PointerButton {
+                device_id: _,
+                state,
+                position: _,
+                primary: true,
+                button: ButtonSource::Mouse(button),
+            } => {
+                use MouseButton as B;
+                (self.callbacks.on_mouse_button)(
+                    match state {
+                        ElementState::Pressed => true,
+                        ElementState::Released => false,
+                    },
+                    match button {
+                        B::Left => 0,
+                        B::Right => 1,
+                        B::Middle => 2,
+                        B::Back => 3,
+                        B::Forward => 4,
+                        B::Other(b) => b,
+                    },
+                );
             }
             _ => {
                 let Some(SurfaceAndWindow { window, .. }) = self.window.as_mut() else {
@@ -198,17 +230,23 @@ fn create_gl_context(window: &dyn Window, gl_config: &Config) -> NotCurrentConte
             })
     }
 }
-
-pub(super) struct WinitApp {
+pub(crate) struct Callbacks {
+    pub on_render_callback: Box<dyn FnMut(&skia_safe::Canvas)>,
+    pub on_mouse_move: Box<dyn FnMut(f64, f64)>,
+    pub on_window_resize: Box<dyn FnMut(f64, f64)>,
+    pub on_mouse_button: Box<dyn FnMut(bool, u16)>,
+}
+pub(crate) struct WinitApp {
     template: ConfigTemplateBuilder,
     gl_context: Option<PossiblyCurrentContext>,
     exit_state: color_eyre::Result<()>,
     window_options: WindowAttributes,
     window: Option<SurfaceAndWindow>,
+    callbacks: Callbacks,
 }
 
 impl WinitApp {
-    pub(super) fn new(options: impl Into<WindowAttributes>) -> Self {
+    pub(crate) fn new(options: impl Into<WindowAttributes>, callbacks: Callbacks) -> Self {
         let options = options.into();
         Self {
             template: ConfigTemplateBuilder::new()
@@ -218,6 +256,7 @@ impl WinitApp {
             exit_state: Ok(()),
             gl_context: None,
             window: None,
+            callbacks,
         }
     }
     fn post_opengl_init(&mut self, window: Box<dyn Window>, gl_config: Config) {
@@ -264,7 +303,7 @@ impl WinitApp {
             skia_context,
         });
     }
-    pub(super) fn initialize_skia(
+    pub(crate) fn initialize_skia(
         &mut self,
         gl_config: &Config,
         gl_surface: &Surface<WindowSurface>,
@@ -340,9 +379,9 @@ impl WinitApp {
         )
         .expect("Failed to create Skia surface")
     }
-    pub(super) fn run(mut self) {
+    pub(crate) fn run(mut self) {
         let event_loop = EventLoop::new().unwrap();
-        event_loop.set_control_flow(ControlFlow::Poll);
+        event_loop.set_control_flow(ControlFlow::Wait);
         event_loop.run_app(&mut self).unwrap();
         self.exit_state.unwrap();
     }
