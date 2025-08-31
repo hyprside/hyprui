@@ -11,14 +11,13 @@ use glutin_winit::GlWindow;
 use skia_safe::gpu::direct_contexts::make_gl;
 use skia_safe::gpu::ganesh::gl::backend_render_targets;
 use skia_safe::gpu::gl::Format;
-use skia_safe::gpu::{self, DirectContext, gl};
-use skia_safe::{Color, Color4f, ColorType, Paint, Rect};
+use skia_safe::gpu::{self, DirectContext};
+use skia_safe::{Color, ColorType};
 use std::num::NonZeroU32;
 use std::rc::Rc;
 use winit::application::ApplicationHandler;
 use winit::event::{ButtonSource, ElementState, Ime, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
-use winit::keyboard::{Key, NamedKey};
 use winit::raw_window_handle::HasWindowHandle;
 use winit::window::{Window, WindowAttributes, WindowId};
 
@@ -149,10 +148,10 @@ impl ApplicationHandler for WinitApp {
 				log::debug!("Render");
 			}
 			WindowEvent::PointerMoved {
-				device_id,
+				device_id: _,
 				position,
-				primary,
-				source,
+				primary: true,
+				source: _,
 			} => {
 				let Some(SurfaceAndWindow { window, .. }) = self.window.as_mut() else {
 					return;

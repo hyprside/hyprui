@@ -1,0 +1,14 @@
+<UserProfile
+    name="John Doe"
+    age={30}
+    is_admin={user.is_admin}
+    active
+    avatar_url={user.avatar}>
+    <container padding_all={10}>
+        <text font_size={16}>User Details</text>
+    </container>
+    <text>Welcome back!</text>
+    <clickable key="edit_profile" on_click={|| edit_profile()}>
+        <text>Edit Profile</text>
+    </clickable>
+</UserProfile>

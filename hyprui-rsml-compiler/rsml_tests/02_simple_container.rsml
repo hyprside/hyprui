@@ -1,0 +1,8 @@
+<container
+    background_color={(0x22, 0x22, 0x22)}
+    padding_all={16}
+    rounded={10.0}
+    center>
+    <text font_size={16} color={(255, 255, 255, 255).into()}>Hello World!</text>
+    <text font_size={14}>Second line</text>
+</container>

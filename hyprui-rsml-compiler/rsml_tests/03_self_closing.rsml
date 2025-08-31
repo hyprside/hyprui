@@ -1,0 +1,6 @@
+<container>
+    <text>Before separator</text>
+    <container />
+    <text>After separator</text>
+    <Divider />
+</container>

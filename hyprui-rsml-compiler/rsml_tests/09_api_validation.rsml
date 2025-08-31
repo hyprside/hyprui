@@ -1,0 +1,104 @@
+<container
+    background_color={(50, 50, 50, 200)}
+    direction={Direction::Column}
+    gap={16}
+    padding_all={20}
+    rounded={8.0}
+    w_expand
+    h_expand
+    center>
+
+
+    <text
+        font_size={18}
+        color={(255, 255, 255, 255).into()}
+        font_family="Inter"
+        italic={false}>
+        API Validation Test
+    </text>
+
+
+    <container
+        background_color={(100, 100, 100, 255)}
+        symmetric_padding={12, 8}
+        rounded_t={4.0}
+        w_fit>
+        <text color={(200, 200, 200, 255).into()}>Symmetric Padding</text>
+    </container>
+
+    <container
+        background_color={(120, 120, 120, 255)}
+        weird_padding={5, 10, 15, 20}
+        rounded_b={6.0}
+        min_width={200.0}
+        max_height={100.0}>
+        <text color={(180, 180, 180, 255).into()}>Weird Padding (top, right, bottom, left)</text>
+    </container>
+
+
+    <container
+        direction={Direction::Row}
+        justify={Justify::Center}
+        align={Align::Center}
+        gap={8}
+        background_color={(0, 100, 200, 100)}
+        padding_all={10}>
+
+        <text font_size={12}>Item 1</text>
+        <text font_size={12}>Item 2</text>
+        <text font_size={12}>Item 3</text>
+    </container>
+
+
+    <container direction={Direction::Row} gap={10}>
+        <container
+            background_color={(200, 100, 100, 255)}
+            padding_all={8}
+            rounded_l={12.0}
+            w_fit>
+            <text color={(255, 255, 255, 255).into()} font_size={10}>Left Rounded</text>
+        </container>
+
+        <container
+            background_color={(100, 200, 100, 255)}
+            padding_all={8}
+            rounded_r={12.0}
+            w_fit>
+            <text color={(255, 255, 255, 255).into()} font_size={10}>Right Rounded</text>
+        </container>
+    </container>
+
+
+    <clickable
+        key="full_featured_button"
+        on_click={|| println!("Clicked!")}
+        on_mouse_enter={|| println!("Mouse entered")}
+        on_mouse_leave={|| println!("Mouse left")}
+        on_right_click={|| println!("Right clicked!")}>
+
+        <container
+            background_color={(0, 150, 255, 255)}
+            padding_all={12}
+            rounded={6.0}
+            center>
+            <text
+                color={(255, 255, 255, 255).into()}
+                font_size={14}
+                font_family="UbuntuSans NF">
+                Full Featured Button
+            </text>
+        </container>
+    </clickable>
+
+
+    <container
+        background_color={(255, 200, 100, 150)}
+        min_width={150.0}
+        max_width={300.0}
+        min_height={50.0}
+        max_height={80.0}
+        center>
+        <text font_size={13}>Size Constrained Container</text>
+    </container>
+
+</container>

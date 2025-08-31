@@ -16,9 +16,10 @@ use clay_layout::{
 mod hooks;
 pub use element::{Element, clickable::Clickable, component::Component, container::*, text::Text};
 pub use hooks::*;
-pub use input::{InputManager};
+pub use input::{InputManager, NamedKey, NativeKey};
+pub use hyprui_rsml_compiler::rsml;
 pub(crate) use input::winit_impl::WinitInputManager;
-pub(crate) use render_context::RenderContext;
+pub use render_context::RenderContext;
 pub use window_options::WindowOptions;
 
 use crate::{
@@ -61,7 +62,7 @@ impl GlobalClosure for std::thread::LocalKey<RefCell<Box<dyn Fn()>>> {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use hyprui::{create_window, WindowOptions, Text};
 ///
 /// fn root_component(_: ()) -> Box<dyn hyprui::Element> {

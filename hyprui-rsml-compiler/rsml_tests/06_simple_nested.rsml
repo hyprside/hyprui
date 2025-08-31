@@ -1,0 +1,10 @@
+<container padding_all={10}>
+    <text>Header</text>
+    <container background_color={(50, 50, 50)}>
+        <text>Nested content</text>
+        <container padding_all={5}>
+            <text>Deep nested</text>
+        </container>
+    </container>
+    <text>Footer</text>
+</container>

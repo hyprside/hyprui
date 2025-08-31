@@ -638,9 +638,19 @@ dependencies = [
  "env_logger",
  "glutin",
  "glutin-winit",
+ "hyprui-rsml-compiler",
  "log",
  "skia-safe",
  "winit",
+]
+
+[[package]]
+name = "hyprui-rsml-compiler"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

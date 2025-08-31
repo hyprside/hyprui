@@ -24,15 +24,12 @@ struct HookKey {
 /// Should be paired with [`end_component`] at the end of the component render.
 pub fn begin_component(key: impl Into<String>) {
 	let key = key.into();
-	println!("begin_component: {key}");
-	// Ao entrar num componente, adiciona um novo nível ao caminho.
-	// O índice é o número de componentes já abertos neste nível.
 	HOOK_PATH.with(move |path| {
 		let mut path = path.borrow_mut();
 		if let Some(last) = path.last_mut() {
 			last.0 += 1;
 		}
-		path.push((0, key)); // Começa o próximo nível com 0
+		path.push((0, key));
 	});
 	HOOK_INDEX.with(|idx| *idx.borrow_mut() = 0);
 }
@@ -63,10 +60,11 @@ pub type Entity<T> = (Rc<RefCell<T>>, Box<dyn Fn(&dyn Fn(&mut T))>);
 /// React-style state hook for persistent, reactive state in a component.
 ///
 /// The state is stable for each unique component position and hook call order.
-/// When the setter is called, the component is scheduled for re-render.
+/// When the setter is called, the window is scheduled for re-render.
 ///
 /// # Example
-/// ```
+/// ```rust,no_run
+/// # use hyprui::use_state;
 /// let (count, set_count) = use_state(0);
 /// set_count(count + 1);
 /// ```
@@ -162,8 +160,7 @@ pub fn use_ref<T: 'static>(initial: T) -> Rc<RefCell<T>> {
 	})
 }
 
-/// Memoiza o valor retornado por `f` enquanto as dependências não mudarem.
-/// Se as dependências mudarem, executa `f` novamente.
+/// See useMemo from react: https://react.dev/reference/react/useMemo
 pub fn use_memo<T, D, F>(f: F, deps: D) -> Rc<T>
 where
 	T: 'static,
@@ -263,12 +260,12 @@ mod tests {
 			begin_component("root");
 			// Component 1
 			begin_component("component-1");
-			let (a, set_a) = use_state(100);
+			let (_a, set_a) = use_state(100);
 			end_component();
 
 			// Component 2
 			begin_component("component-2");
-			let (b, set_b) = use_state(200);
+			let (_b, set_b) = use_state(200);
 			end_component();
 			end_component();
 

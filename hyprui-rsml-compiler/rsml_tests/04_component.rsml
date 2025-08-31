@@ -1,0 +1,6 @@
+<container>
+    <Counter />
+    <TodoList items={vec!["Item 1", "Item 2"]} />
+    <text>Between components</text>
+    <UserProfile user={current_user} />
+</container>
