@@ -302,7 +302,6 @@ impl WinitApp {
 					return;
 				};
 				window.request_redraw();
-				println!("redraw requested");
 			})
 		});
 		let (skia_surface, skia_context) = self.initialize_skia(&gl_config, &gl_surface);

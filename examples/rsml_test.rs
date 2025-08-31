@@ -31,7 +31,6 @@ fn counter_component(_: ()) -> Box<dyn Element> {
                         font_size={16}
                         color={(255, 255, 255, 255).into()}
                         font_family="UbuntuSans NF">
-                        {format!("CountA: {}", count)}
                         {format!("Count: {}", count)}
                     </text>
                 </clickable>

@@ -628,7 +628,7 @@ impl CodeGenerator {
                     Node::Expression(expr) => expr.clone(),
                     Node::Element(element) => panic!("Text element cannot contain other elements, but found {:?}", element),
                 }).collect::<Vec<String>>().join(", ");
-            let format_string = " {}, ".repeat(element.children.len()).trim().to_string();
+            let format_string = " {} ".repeat(element.children.len()).trim().to_string();
             let format_call = format!("format!(\"{}\", {})", format_string, fmt_args);
             format!("{}::new({})", element_type, format_call)
         } else {
