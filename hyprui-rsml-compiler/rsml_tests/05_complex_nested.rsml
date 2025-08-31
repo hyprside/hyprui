@@ -27,27 +27,22 @@
         direction={Direction::Row}
         padding_all={8}
         center>
-        <clickable
-            key="edit_btn"
+        <container
+            background_color={(0x00, 0x7a, 0xcc)}
+            padding_all={12}
+            rounded={6.0}
             on_click={|| handle_edit()}
-            on_mouse_enter={|| set_hover_state(true)}>
-            <container
-                background_color={(0x00, 0x7a, 0xcc)}
-                padding_all={12}
-                rounded={6.0}>
-                <text color={(255, 255, 255, 255).into()}>Edit Profile</text>
-            </container>
-        </clickable>
+        		on_mouse_enter={|| set_hover_state(true)}
+            >
+            <text color={(255, 255, 255, 255).into()}>Edit Profile</text>
+        </container>
 
-        <clickable
-            key="delete_btn"
+        <container
+            background_color={(0xcc, 0x00, 0x00)}
+            padding_all={12}
+            rounded={6.0}
             on_click={move || confirm_delete(user.id)}>
-            <container
-                background_color={(0xcc, 0x00, 0x00)}
-                padding_all={12}
-                rounded={6.0}>
-                <text color={(255, 255, 255, 255).into()}>Delete</text>
-            </container>
-        </clickable>
+            <text color={(255, 255, 255, 255).into()}>Delete</text>
+        </container>
     </container>
 </container>

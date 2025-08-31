@@ -7,18 +7,17 @@ mod input;
 mod render_context;
 mod window_options;
 mod winit;
-
 use clay_layout::{
 	Declaration, grow,
 	layout::Alignment,
 	math::{Dimensions, Vector2},
 };
 mod hooks;
-pub use element::{Element, clickable::Clickable, component::Component, container::*, text::Text};
+pub use element::{Element, component::Component, container::*, text::Text};
 pub use hooks::*;
-pub use input::{InputManager, NamedKey, NativeKey};
 pub use hyprui_rsml_compiler::rsml;
 pub(crate) use input::winit_impl::WinitInputManager;
+pub use input::{InputManager, NamedKey, NativeKey};
 pub use render_context::RenderContext;
 pub use window_options::WindowOptions;
 
@@ -130,25 +129,12 @@ pub fn create_window<Props: Clone + 'static>(
 					{
 						let mut c = clay.begin();
 
-						c.with(
-							Declaration::new()
-								.layout()
-								.child_alignment(Alignment::new(
-									clay_layout::layout::LayoutAlignmentX::Center,
-									clay_layout::layout::LayoutAlignmentY::Center,
-								))
-								.width(grow!())
-								.height(grow!())
-								.end(),
-							|c| {
-								let mut render_ctx = RenderContext {
-									c,
-									font_manager: &mut font_manager,
-									input_manager: input_manager_ref.deref(),
-								};
-								root_component.render(&mut render_ctx);
-							},
-						);
+						let mut render_ctx = RenderContext {
+							c: &mut c,
+							font_manager: &mut font_manager,
+							input_manager: input_manager_ref.deref(),
+						};
+						root_component.render(&mut render_ctx);
 
 						clay_skia_render::<()>(canvas, c.end(), |_, _, _| {}, &font_manager.get_fonts());
 					}

@@ -1,9 +1,15 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+mod clickable;
 use crate::render_context::RenderContext;
 use crate::{Component, element::Element};
+use crate::{begin_component, end_component, use_ref};
 use clay_layout::{
 	Color, Declaration,
 	layout::{Alignment, LayoutDirection, Padding, Sizing},
 };
+use clickable::Clickable;
+pub use clickable::ClickableState;
 pub type Justify = clay_layout::layout::LayoutAlignmentX;
 pub type Align = clay_layout::layout::LayoutAlignmentY;
 
@@ -12,6 +18,33 @@ pub enum Direction {
 	#[default]
 	Row,
 	Column,
+}
+#[derive(Copy, Clone, Debug, Default)]
+pub struct BorderWidth {
+	/// Border width on the left side.
+	pub left: u16,
+	/// Border width on the right side.
+	pub right: u16,
+	/// Border width on the top side.
+	pub top: u16,
+	/// Border width on the bottom side.
+	pub bottom: u16,
+	/// Border width between child elements.
+	pub between_children: u16,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Border {
+	pub width: BorderWidth,
+	pub color: Color,
+}
+impl Default for Border {
+	fn default() -> Self {
+		Self {
+			width: Default::default(),
+			color: Color::rgb(0., 0., 0.),
+		}
+	}
 }
 #[derive(Debug, Clone)]
 pub struct ContainerStyle {
@@ -23,6 +56,7 @@ pub struct ContainerStyle {
 	pub justify: Justify,
 	pub direction: Direction,
 	pub padding: (u16, u16, u16, u16),
+	pub border: Border,
 }
 impl Default for ContainerStyle {
 	fn default() -> Self {
@@ -34,7 +68,8 @@ impl Default for ContainerStyle {
 			gap: 0,
 			align: Align::Top,
 			justify: Justify::Left,
-			direction: Direction::Row,
+			direction: Direction::Column,
+			border: Default::default(),
 		}
 	}
 }
@@ -49,14 +84,26 @@ pub struct Container {
 	pub children: Vec<Box<dyn Element>>,
 	pub style: ContainerStyle,
 	pub style_if_hovered: Box<dyn Fn(ContainerStyle) -> ContainerStyle>,
+	pub style_if_pressed: Box<dyn Fn(ContainerStyle) -> ContainerStyle>,
+	pub style_if_focused: Box<dyn Fn(ContainerStyle) -> ContainerStyle>,
+	pub(crate) clickable: Option<Clickable>,
+	pub(crate) clickable_state: Rc<RefCell<ClickableState>>,
 }
 
 impl Default for Container {
 	fn default() -> Self {
+		begin_component("container");
+		let clickable_state = use_ref(ClickableState::default());
+		end_component();
 		Self {
 			children: Vec::new(),
 			style: ContainerStyle::default(),
 			style_if_hovered: Box::new(|style| style),
+			style_if_pressed: Box::new(|style| style),
+			style_if_focused: Box::new(|style| style),
+
+			clickable: None,
+			clickable_state,
 		}
 	}
 }
@@ -215,18 +262,77 @@ impl Container {
 		self.style_if_hovered = Box::new(f);
 		self
 	}
+	pub fn style_if_pressed<F>(mut self, f: F) -> Self
+	where
+		F: Fn(ContainerStyle) -> ContainerStyle + 'static,
+	{
+		self.style_if_pressed = Box::new(f);
+		self
+	}
+	pub fn style_if_focused<F>(mut self, f: F) -> Self
+	where
+		F: Fn(ContainerStyle) -> ContainerStyle + 'static,
+	{
+		self.style_if_focused = Box::new(f);
+		self
+	}
+
+	pub fn border_color(mut self, color: impl Into<Color>) -> Self {
+		self.style.border.color = color.into();
+		self
+	}
+
+	pub fn border_width(mut self, width: u16) -> Self {
+		self.style.border.width.bottom = width;
+		self.style.border.width.top = width;
+		self.style.border.width.left = width;
+		self.style.border.width.right = width;
+		self
+	}
+
+	pub fn border_left(mut self, width: u16) -> Self {
+		self.style.border.width.left = width;
+		self
+	}
+
+	pub fn border_right(mut self, width: u16) -> Self {
+		self.style.border.width.right = width;
+		self
+	}
+
+	pub fn border_top(mut self, width: u16) -> Self {
+		self.style.border.width.top = width;
+		self
+	}
+
+	pub fn border_bottom(mut self, width: u16) -> Self {
+		self.style.border.width.bottom = width;
+		self
+	}
+
+	pub fn border_between_children(mut self, width: u16) -> Self {
+		self.style.border.width.between_children = width;
+		self
+	}
 }
 
 impl Element for Container {
 	fn render<'clay: 'render, 'render>(&'render self, ctx: &mut RenderContext<'clay, 'render, '_>) {
 		ctx.c.with_styling(
 			|c| {
+				let mut clickable_state = self.clickable_state.borrow_mut();
+				if let Some(clickable) = &self.clickable {
+					clickable.update(ctx.input_manager, &mut clickable_state, c.hovered());
+				}
 				let mut declaration = Declaration::new();
-				let effective_style = if c.hovered() {
-					(self.style_if_hovered)(self.style.clone())
-				} else {
-					self.style.clone()
-				};
+				let mut effective_style = self.style.clone();
+				if c.hovered() {
+					effective_style = (self.style_if_hovered)(effective_style);
+				}
+
+				if c.hovered() && ctx.input_manager.is_mouse_button_pressed(0) {
+					effective_style = (self.style_if_pressed)(effective_style);
+				}
 				declaration
 					.layout()
 					.direction(match effective_style.direction {
@@ -253,13 +359,21 @@ impl Element for Container {
 					.bottom_left(effective_style.border_radius.2)
 					.bottom_right(effective_style.border_radius.3)
 					.end()
+					.border()
+					.between_children(self.style.border.width.between_children)
+					.color(self.style.border.color)
+					.top(self.style.border.width.top)
+					.right(self.style.border.width.right)
+					.bottom(self.style.border.width.bottom)
+					.left(self.style.border.width.left)
+					.end()
 					.background_color(effective_style.background_color);
 				declaration
 			},
 			|c| {
 				let mut child_ctx = RenderContext {
 					c,
-					font_manager: ctx.font_manager,
+					font_manager: &mut *ctx.font_manager,
 					input_manager: ctx.input_manager,
 				};
 				for child in &self.children {

@@ -1,6 +1,5 @@
-<clickable
-    key="submit_btn"
+<container
     on_click={|| println!("Clicked!")}
     on_mouse_enter={|| println!("Hovered!")}>
     <text>Submit</text>
-</clickable>
+</container>

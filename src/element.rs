@@ -1,4 +1,3 @@
-pub mod clickable;
 pub mod component;
 pub mod container;
 pub mod text;

@@ -69,26 +69,24 @@
     </container>
 
 
-    <clickable
-        key="full_featured_button"
-        on_click={|| println!("Clicked!")}
-        on_mouse_enter={|| println!("Mouse entered")}
-        on_mouse_leave={|| println!("Mouse left")}
-        on_right_click={|| println!("Right clicked!")}>
+  	<container
+      background_color={(0, 150, 255, 255)}
+      padding_all={12}
+      rounded={6.0}
+      center
 
-        <container
-            background_color={(0, 150, 255, 255)}
-            padding_all={12}
-            rounded={6.0}
-            center>
-            <text
-                color={(255, 255, 255, 255).into()}
-                font_size={14}
-                font_family="UbuntuSans NF">
-                Full Featured Button
-            </text>
-        </container>
-    </clickable>
+		        on_click={|| println!("Clicked!")}
+		        on_mouse_enter={|| println!("Mouse entered")}
+		        on_mouse_leave={|| println!("Mouse left")}
+		        on_right_click={|| println!("Right clicked!")}
+      >
+        <text
+            color={(255, 255, 255, 255).into()}
+            font_size={14}
+            font_family="UbuntuSans NF">
+            Full Featured Button
+        </text>
+    </container>
 
 
     <container

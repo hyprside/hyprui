@@ -1,44 +1,63 @@
-#![allow(non_snake_case)]
-use hyprui::{Clickable,  Container, Element, Text, WindowOptions, use_state};
+use hyprui::{Element, WindowOptions, rsml, use_state};
 
-fn root(_: ()) -> Box<dyn Element> {
-	let (counter, set_counter) = use_state(0);
+fn counter_component(_: ()) -> Box<dyn Element> {
+	let (count, set_count) = use_state(0);
 
-	Box::new(
-		Container::new()
-			.direction(hyprui::Direction::Column)
-			.h_expand()
-			.background_color((0x0b, 0x0b, 0x0b))
-			.center()
-			.child(
-				Container::new()
-					.background_color((0x22, 0x22, 0x22))
-					.padding_all(16)
-					.rounded(10.)
-					.w_fit()
-					.child(
-						Clickable::new(
-							"toggle_btn",
-							Text::new(format!("Counter {}", counter))
-								.font_size(16)
-								.color((255, 255, 255, 255).into())
-								.font_family("UbuntuSans NF"),
-						)
-						.on_click(move || set_counter(counter + 1)),
-					),
-			),
-	)
+	rsml! {
+			<container
+					direction={hyprui::Direction::Column}
+					padding_all={20}
+					background_color={(0x1a, 0x1a, 0x1a)}
+					h_expand
+					gap={10}
+					center>
+
+					<text
+							font_size={20}
+							color={(255, 255, 255, 255)}
+							font_family="UbuntuSans NF"
+							text_center
+						>
+							RSML Counter Test
+					</text>
+
+					<container
+							background_color={(0x00, 0x7a, 0xcc)}
+							padding_all={16}
+							rounded={8.0}
+							on_click={move || set_count(count + 1)}
+							center>
+								<text
+										font_size={16}
+										color={(255, 255, 255, 255)}
+										font_family="UbuntuSans NF"
+										text_center
+										>
+										{format!("Count: {}", count)}
+								</text>
+					</container>
+
+					<text
+							font_size={14}
+							color={(200, 200, 200, 255)}
+							font_family="UbuntuSans NF"
+							text_center
+							>
+							Click the button to increment!
+					</text>
+			</container>
+	}
 }
 
 fn main() {
 	env_logger::init();
 
 	hyprui::create_window(
-		root,
+		counter_component,
 		(),
 		WindowOptions {
-			title: "HyprUI Counter Example".into(),
-			preferred_size: (340.0, 220.0),
+			title: "Welcome to HyprUI".into(),
+			preferred_size: (400.0, 300.0),
 			..Default::default()
 		},
 	);
