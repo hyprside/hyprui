@@ -1,9 +1,9 @@
 use clay_layout::math::{BoundingBox, Dimensions};
-use clay_layout::render_commands::{Custom, RenderCommand, RenderCommandConfig};
+use clay_layout::render_commands::{Border, Custom, RenderCommand, RenderCommandConfig};
 use clay_layout::text::TextConfig;
 use clay_layout::{ClayLayoutScope, Color as ClayColor};
 use skia_safe::{
-	Canvas, ClipOp, Color, Color4f, Font, Image, Paint, PaintCap, Point, RRect, Rect,
+	Canvas, ClipOp, Color, Color4f, Font, Image, Paint, PaintCap, Path, Point, RRect, Rect,
 	SamplingOptions, Typeface,
 };
 
@@ -134,188 +134,122 @@ pub fn clay_skia_render<'a, CustomElementData: 'a>(
 			}
 
 			RenderCommandConfig::Border(border) => {
-				// Draw each border side using fill rectangles.
-				let paint = {
-					let mut p = Paint::default();
-					p.set_color4f(clay_to_skia_color(border.color), None);
-					p.set_anti_alias(true);
-					p
-				};
+				// Helper to draw a single side of a rounded border using rrect stroke and a clip path.
+				fn draw_side_border_rrect(
+					canvas: &Canvas,
+					bounds: Rect,
+					rrect: &RRect,
+					center: Point,
+					side: usize, // 0: left, 1: top, 2: right, 3: bottom
+					stroke_width: f32,
+					color: Color4f,
+					border: &Border,
+				) {
+					let mut path = Path::new();
+					match side {
+						0 => {
+							// Left
+							path.move_to(center);
+							path.line_to(Point::new(bounds.left, bounds.top));
+							path.line_to(Point::new(bounds.left, bounds.bottom));
+							path.close();
+						}
+						1 => {
+							// Top
+							path.move_to(center);
+							path.line_to(Point::new(bounds.left, bounds.top));
+							path.line_to(Point::new(bounds.right, bounds.top));
+							path.close();
+						}
+						2 => {
+							// Right
+							path.move_to(center);
+							path.line_to(Point::new(bounds.right, bounds.top));
+							path.line_to(Point::new(bounds.right, bounds.bottom));
+							path.close();
+						}
+						3 => {
+							// Bottom
+							path.move_to(center);
+							path.line_to(Point::new(bounds.left, bounds.bottom));
+							path.line_to(Point::new(bounds.right, bounds.bottom));
+							path.close();
+						}
+						_ => {}
+					}
+					canvas.save();
+					canvas.clip_path(&path, ClipOp::Intersect, false);
+
+					let mut paint = Paint::default();
+					paint.set_color4f(color, None);
+					paint.set_anti_alias(true);
+					paint.set_style(skia_safe::PaintStyle::Stroke);
+					paint.set_stroke_width(stroke_width);
+					let rrect = RRect::new_rect_radii(
+						Rect::from_ltrb(
+							rrect.rect().left + (border.width.left as f32 / 2.0),
+							rrect.rect().top + (border.width.top as f32 / 2.0),
+							rrect.rect().right - (border.width.right as f32 / 2.0),
+							rrect.rect().bottom - (border.width.bottom as f32 / 2.0),
+						),
+						rrect.radii_ref(),
+					);
+					canvas.draw_rrect(rrect, &paint);
+
+					canvas.restore();
+				}
 
 				let bb = &command.bounding_box;
+				let bounds = clay_to_skia_rect(*bb);
 
-				// Left border.
-				if border.width.left > 0 {
-					let rect = Rect::from_xywh(
-						bb.x,
-						bb.y + border.corner_radii.top_left,
-						border.width.left as f32,
-						bb.height - border.corner_radii.top_left - border.corner_radii.bottom_left,
-					);
-					canvas.draw_rect(rect, &paint);
-				}
+				let rrect = RRect::new_rect_radii(
+					bounds,
+					&[
+						Point::new(border.corner_radii.top_left, border.corner_radii.top_left),
+						Point::new(border.corner_radii.top_right, border.corner_radii.top_right),
+						Point::new(
+							border.corner_radii.bottom_right,
+							border.corner_radii.bottom_right,
+						),
+						Point::new(
+							border.corner_radii.bottom_left,
+							border.corner_radii.bottom_left,
+						),
+					],
+				);
 
-				// Right border.
-				if border.width.right > 0 {
-					let rect = Rect::from_xywh(
-						bb.x + bb.width - border.width.right as f32,
-						bb.y + border.corner_radii.top_right,
-						border.width.right as f32,
-						bb.height - border.corner_radii.top_right - border.corner_radii.bottom_right,
-					);
-					canvas.draw_rect(rect, &paint);
-				}
+				let center = Point::new(
+					bounds.left + bounds.width() / 2.0,
+					bounds.top + bounds.height() / 2.0,
+				);
 
-				// Top border.
-				if border.width.top > 0 {
-					let rect = Rect::from_xywh(
-						bb.x + border.corner_radii.top_left,
-						bb.y,
-						bb.width - border.corner_radii.top_left - border.corner_radii.top_right,
-						border.width.top as f32,
-					);
-					canvas.draw_rect(rect, &paint);
-				}
+				// Draw each border side with its own width and color.
+				let border_colors = [
+					clay_to_skia_color(border.color), // left
+					clay_to_skia_color(border.color), // top
+					clay_to_skia_color(border.color), // right
+					clay_to_skia_color(border.color), // bottom
+				];
+				let border_widths = [
+					border.width.left as f32,
+					border.width.top as f32,
+					border.width.right as f32,
+					border.width.bottom as f32,
+				];
 
-				// Bottom border.
-				if border.width.bottom > 0 {
-					let rect = Rect::from_xywh(
-						bb.x + border.corner_radii.bottom_left,
-						bb.y + bb.height - border.width.bottom as f32,
-						bb.width - border.corner_radii.bottom_left - border.corner_radii.bottom_right,
-						border.width.bottom as f32,
-					);
-					canvas.draw_rect(rect, &paint);
-				}
-
-				// For corner arcs, we draw strokes.
-				let mut stroke = Paint::default();
-				stroke.set_color4f(clay_to_skia_color(border.color), None);
-
-				stroke.set_style(skia_safe::paint::Style::Stroke);
-				stroke.set_anti_alias(true);
-
-				// Helper to draw an arc.
-				let mut draw_corner_arc = |canvas: &Canvas,
-				                           center_x: f32,
-				                           center_y: f32,
-				                           radius: f32,
-				                           start_angle: f32,
-				                           sweep_angle: f32,
-				                           width: u16| {
-					let radius = radius - (width as f32 / 2.);
-					let arc_rect = Rect::from_xywh(
-						center_x - radius,
-						center_y - radius,
-						radius * 2.0,
-						radius * 2.0,
-					);
-
-					stroke.set_stroke_width(width as f32);
-					stroke.set_stroke_cap(PaintCap::Round);
-					canvas.draw_arc(arc_rect, start_angle, sweep_angle, false, &stroke);
-				};
-
-				if border.corner_radii.top_left > 0. {
-					// top-left: arc from 180 to 270 degrees.
-					let center_x = bb.x + border.corner_radii.top_left;
-					let center_y = bb.y + border.corner_radii.top_left;
-
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.top_left,
-						180.0,
-						90.0 / 2.,
-						border.width.left,
-					);
-
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.top_left,
-						180.0 + 90.0 / 2.,
-						90.0 / 2.,
-						border.width.top,
-					);
-				}
-
-				if border.corner_radii.top_right > 0. {
-					// top-right: arc from 270 to 360 degrees.
-					let center_x = bb.x + bb.width - border.corner_radii.top_right;
-					let center_y = bb.y + border.corner_radii.top_right;
-
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.top_right,
-						270.0,
-						90.0 / 2.0,
-						border.width.top,
-					);
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.top_right,
-						270.0 + 90. / 2.,
-						90.0 / 2.0,
-						border.width.right,
-					);
-				}
-
-				if border.corner_radii.bottom_left > 0. {
-					// bottom-left: arc from 90 to 180 degrees.
-					let center_x = bb.x + border.corner_radii.bottom_left;
-					let center_y = bb.y + bb.height - border.corner_radii.bottom_left;
-
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.bottom_left,
-						90.0,
-						90.0 / 2.,
-						border.width.bottom,
-					);
-
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.bottom_left,
-						90.0 + 90. / 2.,
-						90.0 / 2.,
-						border.width.left,
-					);
-				}
-
-				if border.corner_radii.bottom_right > 0. {
-					// bottom-right: arc from 0 to 90 degrees.
-					let center_x = bb.x + bb.width - border.corner_radii.bottom_right;
-					let center_y = bb.y + bb.height - border.corner_radii.bottom_right;
-
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.bottom_right,
-						0.,
-						90.0 / 2.,
-						border.width.right,
-					);
-					draw_corner_arc(
-						canvas,
-						center_x,
-						center_y,
-						border.corner_radii.bottom_right,
-						90.0 / 2.,
-						90.0 / 2.,
-						border.width.bottom,
-					);
+				for side in 0..4 {
+					if border_widths[side] > 0.0 {
+						draw_side_border_rrect(
+							canvas,
+							bounds,
+							&rrect,
+							center,
+							side,
+							border_widths[side],
+							border_colors[side],
+							&border,
+						);
+					}
 				}
 			}
 			RenderCommandConfig::Custom(ref custom) => render_custom_element(&command, custom, canvas),
