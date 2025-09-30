@@ -776,7 +776,7 @@ impl CodeGenerator {
 	fn is_boolean_method(&self, method_name: &str) -> bool {
 		matches!(
 			method_name,
-			"h_expand" | "w_expand" | "w_fit" | "center" | "text_center" | "text_right" | "text_left"
+			"h_expand" | "w_expand" | "w_fit" | "center" | "text_center" | "text_right" | "text_left" | "focusable" | "focus_container"
 		)
 	}
 }

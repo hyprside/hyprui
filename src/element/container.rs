@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 mod clickable;
+use crate::focus_system::GLOBAL_FOCUS_MANAGER;
 use crate::render_context::RenderContext;
 use crate::{Component, element::Element};
 use crate::{begin_component, end_component, use_ref};
@@ -73,6 +74,92 @@ impl Default for ContainerStyle {
 		}
 	}
 }
+impl ContainerStyle {
+ pub fn background_color(mut self, color: impl Into<Color>) -> Self {
+  self.background_color = color.into();
+  self
+ }
+
+ pub fn border_radius(mut self, top_left: f32, top_right: f32, bottom_left: f32, bottom_right: f32) -> Self {
+  self.border_radius = (top_left, top_right, bottom_left, bottom_right);
+  self
+ }
+
+ pub fn size(mut self, width: Sizing, height: Sizing) -> Self {
+  self.size = (width, height);
+  self
+ }
+
+ pub fn gap(mut self, gap: u16) -> Self {
+  self.gap = gap;
+  self
+ }
+
+ pub fn align(mut self, align: Align) -> Self {
+  self.align = align;
+  self
+ }
+
+ pub fn justify(mut self, justify: Justify) -> Self {
+  self.justify = justify;
+  self
+ }
+
+ pub fn direction(mut self, direction: Direction) -> Self {
+  self.direction = direction;
+  self
+ }
+
+ pub fn padding(mut self, left: u16, right: u16, top: u16, bottom: u16) -> Self {
+  self.padding = (left, right, top, bottom);
+  self
+ }
+
+ pub fn border(mut self, border: Border) -> Self {
+  self.border = border;
+  self
+ }
+
+ pub fn border_color(mut self, color: impl Into<Color>) -> Self {
+  self.border.color = color.into();
+  self
+ }
+
+ pub fn border_width(mut self, width: u16) -> Self {
+  self.border.width.left = width;
+  self.border.width.right = width;
+  self.border.width.top = width;
+  self.border.width.bottom = width;
+  self
+ }
+
+ pub fn border_left(mut self, width: u16) -> Self {
+  self.border.width.left = width;
+  self
+ }
+
+ pub fn border_right(mut self, width: u16) -> Self {
+  self.border.width.right = width;
+  self
+ }
+
+ pub fn border_top(mut self, width: u16) -> Self {
+  self.border.width.top = width;
+  self
+ }
+
+ pub fn border_bottom(mut self, width: u16) -> Self {
+  self.border.width.bottom = width;
+  self
+ }
+
+ pub fn border_between_children(mut self, width: u16) -> Self {
+  self.border.width.between_children = width;
+  self
+ }
+}
+
+
 /// A generic container element that can hold other elements.
 ///
 /// This container element is designed to be flexible and can be used to create a variety of layouts.
@@ -112,8 +199,19 @@ impl Container {
 	pub fn new() -> Self {
 		Self::default()
 	}
-
+	pub fn clickable_ref(mut self, state: Rc<RefCell<ClickableState>>) -> Self {
+		self.clickable_state = state;
+		self
+	}
 	pub fn child(mut self, element: impl Element + 'static) -> Self {
+		if let Some(clickable) = self.clickable.as_mut() {
+			if let Some(focus_node_id) = clickable.focus_node_id {
+				let nodes = element.focus_nodes();
+				GLOBAL_FOCUS_MANAGER.with_borrow_mut(move |f| {
+					f.set_parent(nodes, focus_node_id);
+				})
+			}
+		}
 		self.children.push(Box::new(element));
 		self
 	}
@@ -330,8 +428,12 @@ impl Element for Container {
 					effective_style = (self.style_if_hovered)(effective_style);
 				}
 
-				if c.hovered() && ctx.input_manager.is_mouse_button_pressed(0) {
+				if clickable_state.down {
 					effective_style = (self.style_if_pressed)(effective_style);
+				}
+				if clickable_state.is_focused() {
+					effective_style = (self.style_if_focused)(effective_style);
+					println!("is_focused")
 				}
 				declaration
 					.layout()
@@ -360,12 +462,12 @@ impl Element for Container {
 					.bottom_right(effective_style.border_radius.3)
 					.end()
 					.border()
-					.between_children(self.style.border.width.between_children)
-					.color(self.style.border.color)
-					.top(self.style.border.width.top)
-					.right(self.style.border.width.right)
-					.bottom(self.style.border.width.bottom)
-					.left(self.style.border.width.left)
+					.between_children(effective_style.border.width.between_children)
+					.color(effective_style.border.color)
+					.top(effective_style.border.width.top)
+					.right(effective_style.border.width.right)
+					.bottom(effective_style.border.width.bottom)
+					.left(effective_style.border.width.left)
 					.end()
 					.background_color(effective_style.background_color);
 				declaration
@@ -381,5 +483,12 @@ impl Element for Container {
 				}
 			},
 		);
+	}
+	fn focus_nodes(&self) -> std::collections::HashSet<uuid::Uuid> {
+		let mut nodes = self.children.focus_nodes();
+		if let Some(focus_node_id) = self.clickable.as_ref().and_then(|c| c.focus_node_id) {
+			nodes.insert(focus_node_id);
+		}
+		nodes
 	}
 }

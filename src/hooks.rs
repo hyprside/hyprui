@@ -7,10 +7,10 @@ use std::rc::Rc;
 use crate::GlobalClosure;
 
 thread_local! {
-		static HOOK_PATH: RefCell<Vec<(usize, String)>> = RefCell::new(Vec::new());
-		static HOOK_INDEX: RefCell<usize> = RefCell::new(0);
-		static HOOK_STATES: RefCell<HashMap<HookKey, Box<dyn Any>>> = RefCell::new(HashMap::new());
-		static HOOK_VISITED_STATES: RefCell<HashSet<HookKey>> = RefCell::new(HashSet::new());
+	pub(crate) static HOOK_PATH: RefCell<Vec<(usize, String)>> = RefCell::new(Vec::new());
+	pub(crate) static HOOK_INDEX: RefCell<usize> = RefCell::new(0);
+	pub(crate) static HOOK_STATES: RefCell<HashMap<HookKey, Box<dyn Any>>> = RefCell::new(HashMap::new());
+	pub(crate) static HOOK_VISITED_STATES: RefCell<HashSet<HookKey>> = RefCell::new(HashSet::new());
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

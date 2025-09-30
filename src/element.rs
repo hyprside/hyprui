@@ -1,6 +1,10 @@
 pub mod component;
 pub mod container;
 pub mod text;
+use std::collections::HashSet;
+
+use uuid::Uuid;
+
 use crate::render_context::RenderContext;
 /// The core trait for all renderable UI elements in HyprUI.
 ///
@@ -29,6 +33,9 @@ use crate::render_context::RenderContext;
 /// ```
 pub trait Element {
 	fn render<'clay: 'render, 'render>(&'render self, ctx: &mut RenderContext<'clay, 'render, '_>);
+	fn focus_nodes(&self) -> HashSet<Uuid> {
+		Default::default()
+	}
 }
 
 impl Element for Vec<Box<dyn Element>> {
@@ -37,9 +44,15 @@ impl Element for Vec<Box<dyn Element>> {
 			child.render(ctx);
 		}
 	}
+	fn focus_nodes(&self) -> HashSet<Uuid> {
+		self.iter().flat_map(|e| e.focus_nodes()).collect()
+	}
 }
 impl Element for Box<dyn Element> {
 	fn render<'clay: 'render, 'render>(&'render self, ctx: &mut RenderContext<'clay, 'render, '_>) {
 		self.as_ref().render(ctx);
+	}
+	fn focus_nodes(&self) -> HashSet<Uuid> {
+		self.as_ref().focus_nodes()
 	}
 }

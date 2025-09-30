@@ -2,6 +2,7 @@ use std::{cell::RefCell, ops::Deref, rc::Rc};
 
 mod clay_renderer;
 mod element;
+mod focus_system;
 mod font_manager;
 mod input;
 mod render_context;
@@ -23,7 +24,9 @@ pub use window_options::WindowOptions;
 
 use crate::{
 	clay_renderer::clay_skia_render,
+	focus_system::GLOBAL_FOCUS_MANAGER,
 	font_manager::FontManager,
+	input::Key,
 	winit::{Callbacks, WinitApp},
 };
 
@@ -123,6 +126,21 @@ pub fn create_window<Props: Clone + 'static>(
 				Box::new(move |canvas| {
 					let mut clay = clay.borrow_mut();
 					let mut input_manager_ref = input_manager.borrow_mut();
+					GLOBAL_FOCUS_MANAGER.with_borrow_mut(|f| {
+						f.add_root();
+						if input_manager_ref.is_key_just_pressed(Key::Named(NamedKey::Tab)) {
+							if input_manager_ref.is_key_pressed(Key::Named(NamedKey::Shift)) {
+								f.focus_prev();
+							} else {
+								f.focus_next();
+							}
+						}
+
+						if (!input_manager_ref.cursor_hit_something() && (input_manager_ref.is_mouse_button_just_pressed(0) || input_manager_ref.is_mouse_button_just_pressed(1))) || input_manager_ref.is_key_just_pressed(Key::Named(NamedKey::Escape)) {
+							f.blur();
+						}
+						f.new_frame();
+					});
 					font_manager.update_clay_measure_function(&mut clay);
 					let root_component = Component::new(component, props.clone());
 

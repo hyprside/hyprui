@@ -3,7 +3,9 @@
 use hyprui::*;
 fn Button(_: ()) -> Box<dyn Element> {
 	let (count, set_count) = use_state(0);
-	// let clickable_ref = use_ref(None);
+	let clickable_ref = use_ref(ClickableState::default());
+	// dbg!(clickable_ref.borrow().focus_node_id);
+	dbg!(clickable_ref.borrow().is_focused());
 	// clickable_ref.unwrap().
 	//                        ------------------------------
 	//                        | is_hovered: boolean        |
@@ -19,8 +21,11 @@ fn Button(_: ()) -> Box<dyn Element> {
 			border_width={1}
 			border_color={(0xff, 0xff, 0xff, 0x20)}
 			on_click={move || set_count(count + 1)}
-			style_if_hovered={|s| ContainerStyle {background_color: (0xff, 0xff, 0xff, 0x20).into(), ..s}}
-			style_if_pressed={|s| ContainerStyle {background_color: (0xff, 0xff, 0xff, 0x40).into(), ..s}}
+			style_if_hovered={|s| s.background_color((0xff, 0xff, 0xff, 0x20))}
+			style_if_pressed={|s| s.background_color((0xff, 0xff, 0xff, 0x40))}
+			style_if_focused={|s| s.border_width(4).border_color((0x04, 0x36, 0x82, 0xff))}
+			clickable_ref={clickable_ref}
+			focusable
 		>
 			<text color={(255, 255, 255, 255)} font_family="UbuntuSans NF">
 				{format!("Count: {}", count)}

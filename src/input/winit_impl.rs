@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::atomic::AtomicBool};
 
 use winit::{
 	event::{ElementState, Ime, KeyEvent},
@@ -19,6 +19,7 @@ pub struct WinitInputManager {
 	text_ime_buffer_cursor: (usize, usize),
 	ime_editing: bool,
 	bytes_to_remove: (usize, usize),
+	has_clicked_on_something: AtomicBool
 }
 
 impl WinitInputManager {
@@ -35,6 +36,7 @@ impl WinitInputManager {
 			text_ime_buffer_cursor: (0, 0),
 			ime_editing: false,
 			bytes_to_remove: (0, 0),
+			has_clicked_on_something: Default::default()
 		}
 	}
 
@@ -59,7 +61,7 @@ impl WinitInputManager {
 
 	pub fn handle_key_event(&mut self, event: KeyEvent) {
 		// Block the app from trying to handle keyboard shortcuts while IME is active (for example Tab for focus)
-		if self.ime_editing || event.state == ElementState::Pressed {
+		if self.ime_editing {
 			return;
 		}
 		self
@@ -99,6 +101,12 @@ impl WinitInputManager {
 }
 
 impl InputManager for WinitInputManager {
+	fn cursor_hit_something(&self) -> bool {
+    self.has_clicked_on_something.swap(false, std::sync::atomic::Ordering::Relaxed)
+	}
+	fn set_cursor_clicked_something(&self) {
+    self.has_clicked_on_something.store(true, std::sync::atomic::Ordering::Relaxed);
+	}
 	fn mouse_position(&self) -> (f32, f32) {
 		self.mouse_position
 	}
